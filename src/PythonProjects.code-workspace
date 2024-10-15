@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "../../../../PythonProjects"
+		},
+		{
+			"name": "IOT-monitoring-lab",
+			"path": "../../IOT-monitoring-lab"
+		},
+		{
+			"name": "iot-mqtt-tls",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"array": "cpp",
+			"string": "cpp",
+			"string_view": "cpp",
+			"ranges": "cpp",
+			"span": "cpp",
+			"*.tcc": "cpp",
+			"cstdio": "cpp"
+		}
+	}
+}
