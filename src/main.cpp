@@ -26,6 +26,7 @@
 #include <libiot.h>
 #include <libwifi.h>
 #include <libdisplay.h>
+#include <libota.h>
 
 SensorData data;  // Estructura para almacenar los datos de temperatura y humedad del SHT21
 time_t hora;      // Timestamp de la hora actual

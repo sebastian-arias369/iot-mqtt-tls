@@ -24,6 +24,7 @@
 
 #include <libiot.h>
 #include <SHTSensor.h>
+#include <libota.h>
 
 SHTSensor sht;     //Sensor SHT21
 String alert = ""; //Mensaje de alerta
@@ -109,6 +110,7 @@ void setupIoT() {
   client.setCallback(receivedCallback);       //Configura la función que se ejecutará cuando lleguen mensajes a la suscripción
   setTime();                    //Ajusta el tiempo del dispositivo con servidores SNTP
   setupSHT();                   //Configura el sensor SHT21
+  setupOTA();                   //Configura la funcionalidad OTA
 }
 
 
@@ -181,6 +183,7 @@ void sendSensorData(float temperatura, float humedad) {
  * Función que se ejecuta cuando llega un mensaje a la suscripción MQTT.
  * Construye el mensaje que llegó y si contiene ALERT lo asgina a la variable 
  * alert que es la que se lee para mostrar los mensajes.
+ * También verifica si el mensaje es para actualización OTA.
  */
 void receivedCallback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Recibido [");
@@ -189,5 +192,13 @@ void receivedCallback(char* topic, byte* payload, unsigned int length) {
   String data = ""; // Se inicializa con un string vacío
   for (int i = 0; i < length; i++) data += String((char)payload[i]); // Se recorre el payload y se va concatenando al string data
   Serial.println(data);
+  
+  // Verifica si el mensaje es para actualización OTA
+  if (String(topic) == OTA_TOPIC) {
+    checkOTAUpdate(data.c_str());
+    return;
+  }
+  
+  // Verifica si el mensaje contiene una alerta
   if (data.indexOf("ALERT") >= 0) alert = data; // Si el mensaje contiene la palabra ALERT, se asigna a la variable alert
 }
