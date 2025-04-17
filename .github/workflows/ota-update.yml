@@ -1,0 +1,65 @@
+name: OTA Update to ESP32 via MQTT
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    env:
+      DEVICE_TOPIC: dispositivo/device1/ota
+      FIRMWARE_VERSION: 1.1.0
+      FIRMWARE_NAME: firmware_v1.1.0.bin
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Set up PlatformIO
+        run: pip install platformio
+
+      - name: Build firmware
+        run: platformio run
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp .pio/build/esp32dev/firmware.bin s3://${{ secrets.S3_BUCKET_NAME }}/$FIRMWARE_NAME \
+            --acl public-read \
+            --content-type application/octet-stream
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Publish MQTT OTA message
+        run: |
+          pip install paho-mqtt
+          import paho.mqtt.publish as publish
+          python3 <<EOF
+              port=int("${{ secrets.MQTT_PORT }}"),
+          import json
+
+          payload = json.dumps({
+              "version": "${{ env.FIRMWARE_VERSION }}",
+              "url": "https://${{ secrets.S3_BUCKET_NAME }}.s3.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.FIRMWARE_NAME }}"
+          })
+
+          publish.single(
+              topic="${{ env.DEVICE_TOPIC }}",
+              payload=payload,
+              hostname="${{ secrets.MQTT_BROKER }}",
+              auth={
+                  "username": "${{ secrets.MQTT_USER }}",
+                  "password": "${{ secrets.MQTT_PASSWORD }}"
+              } if "${{ secrets.MQTT_USER }}" else None,
+              tls=None if "${{ secrets.MQTT_TLS }}" == "false" else {}
+          )
+          EOF

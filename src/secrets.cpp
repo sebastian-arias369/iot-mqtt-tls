@@ -39,38 +39,17 @@
 #define COUNTRY "colombia"                        ///< País donde se encuentra el dispositivo
 #define STATE "valle"                             ///< Estado donde se encuentra el dispositivo
 #define CITY "tulua"                              ///< Ciudad donde se encuentra el dispositivo
-#define MQTT_SERVER "iot.denkitronik.com"         ///< Servidor MQTT
+#define MQTT_SERVER "uceva-iot-core.freeddns.org"         ///< Servidor MQTT
 #define MQTT_PORT 8883                            ///< Puerto seguro (TLS)
-#define MQTT_USER "device1"                       ///< Usuario MQTT no adninistrador 
-#define MQTT_PASSWORD "a1b2c3d4"                  ///< Contraseña del usuario MQTT
+#define MQTT_USER "admin"                       ///< Usuario MQTT no adninistrador 
+#define MQTT_PASSWORD "admin1234"                  ///< Contraseña del usuario MQTT
 
 // Variables de configuración de la red WiFi
 // Cambia estos valores por los de su red WiFi
-#define SSID "TU_RED"                             ///< Cambia por el nombre de tu red WiFi
-#define PASSWORD "TU_PASSWIFI"                    ///< Cambia por la contraseña de tu red WiFi
+#define SSID "MAXELL_2.4_F2F"                     ///< Cambia por el nombre de tu red WiFi
+#define PASSWORD "a1b2c3d4"                       ///< Cambia por la contraseña de tu red WiFi
 
-/*********** Fin de parametros configurables por el usuario ***********/
-
-
-/* Constantes de configuración del servidor MQTT, no cambiar */
-const char* mqtt_server = MQTT_SERVER;            ///< Dirección de tu servidor MQTT
-const int mqtt_port = MQTT_PORT;                  ///< Puerto seguro (TLS)
-const char* mqtt_user = MQTT_USER;                ///< Usuario MQTT
-const char* mqtt_password = MQTT_PASSWORD;        ///< Contraseña MQTT
-
-// Obtener la MAC Address
-String macAddress = getMacAddress();
-const char * client_id = macAddress.c_str();      ///< ID del cliente MQTT
-
-// Tópicos de publicación y suscripción
-String mqtt_topic_pub( String(COUNTRY) + "/" + String(STATE) + "/"+ String(CITY) + "/" + String(client_id) + "/" + String(mqtt_user) + "/out");
-String mqtt_topic_sub( String(COUNTRY) + "/" + String(STATE) + "/"+ String(CITY) + "/" + String(client_id) + "/" + String(mqtt_user) + "/in");
-
-// Convertir los tópicos a constantes de tipo char*
-const char * MQTT_TOPIC_PUB = mqtt_topic_pub.c_str();
-const char * MQTT_TOPIC_SUB = mqtt_topic_sub.c_str();
-
-// Certificado raíz de Let's Encrypt (ISRG Root X1) en formato PEM
+// Cambia al certificado del broker: Certificado raíz de Let's Encrypt (ISRG Root X1) en formato PEM
 const char* root_ca = \
 "-----BEGIN CERTIFICATE-----\n" \
 "MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw\n" \
@@ -103,6 +82,27 @@ const char* root_ca = \
 "mRGunUHBcnWEvgJBQl9nJEiU0Zsnvgc/ubhPgXRR4Xq37Z0j4r7g1SgEEzwxA57d\n" \
 "emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=\n" \
 "-----END CERTIFICATE-----\n";
+
+/*********** Fin de parametros configurables por el usuario ***********/
+
+
+/* Constantes de configuración del servidor MQTT, no cambiar */
+const char* mqtt_server = MQTT_SERVER;            ///< Dirección de tu servidor MQTT
+const int mqtt_port = MQTT_PORT;                  ///< Puerto seguro (TLS)
+const char* mqtt_user = MQTT_USER;                ///< Usuario MQTT
+const char* mqtt_password = MQTT_PASSWORD;        ///< Contraseña MQTT
+
+// Obtener la MAC Address
+String macAddress = getMacAddress();
+const char * client_id = macAddress.c_str();      ///< ID del cliente MQTT
+
+// Tópicos de publicación y suscripción
+String mqtt_topic_pub( String(COUNTRY) + "/" + String(STATE) + "/"+ String(CITY) + "/" + String(client_id) + "/" + String(mqtt_user) + "/out");
+String mqtt_topic_sub( String(COUNTRY) + "/" + String(STATE) + "/"+ String(CITY) + "/" + String(client_id) + "/" + String(mqtt_user) + "/in");
+
+// Convertir los tópicos a constantes de tipo char*
+const char * MQTT_TOPIC_PUB = mqtt_topic_pub.c_str();
+const char * MQTT_TOPIC_SUB = mqtt_topic_sub.c_str();
 
 long long int measureTime = millis();   // Tiempo de la última medición
 long long int alertTime = millis();     // Tiempo en que inició la última alerta
