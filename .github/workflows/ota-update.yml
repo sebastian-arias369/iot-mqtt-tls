@@ -40,25 +40,21 @@ jobs:
 
       - name: Publish MQTT OTA message
         run: |
-          pip install paho-mqtt
-          import paho.mqtt.publish as publish
-          python3 <<EOF
-              port=int("${{ secrets.MQTT_PORT }}"),
-          import json
-
-          payload = json.dumps({
-              "version": "${{ env.FIRMWARE_VERSION }}",
-              "url": "https://${{ secrets.S3_BUCKET_NAME }}.s3.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.FIRMWARE_NAME }}"
-          })
-
-          publish.single(
-              topic="${{ env.DEVICE_TOPIC }}",
+            pip install paho-mqtt
+            python3 -c "
+            import os, json
+            import paho.mqtt.publish as publish
+            payload = json.dumps({
+            'version': os.getenv('FIRMWARE_VERSION'),
+            'url': f'https://{os.getenv('S3_BUCKET_NAME')}.s3.{os.getenv('AWS_REGION')}.amazonaws.com/{os.getenv('FIRMWARE_NAME')}'
+            })
+            publish.single(
+              topic=os.getenv('DEVICE_TOPIC'),
               payload=payload,
-              hostname="${{ secrets.MQTT_BROKER }}",
-              auth={
-                  "username": "${{ secrets.MQTT_USER }}",
-                  "password": "${{ secrets.MQTT_PASSWORD }}"
-              } if "${{ secrets.MQTT_USER }}" else None,
-              tls=None if "${{ secrets.MQTT_TLS }}" == "false" else {}
-          )
-          EOF
+              hostname=os.getenv('MQTT_BROKER'),
+              port=int(os.getenv('MQTT_PORT')),
+              auth={ 'username': os.getenv('MQTT_USER'), 'password': os.getenv('MQTT_PASSWORD') } if os.getenv('MQTT_USER') else None,
+              tls={} if os.getenv('MQTT_TLS', 'false') == 'true' else None
+            )
+            print('✅ Mensaje OTA MQTT enviado')
+            "
