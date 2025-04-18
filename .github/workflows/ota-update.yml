@@ -4,24 +4,15 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
-
-    env:
-      DEVICE_TOPIC: dispositivo/device1/ota
-      FIRMWARE_VERSION: 1.1.0
-      FIRMWARE_NAME: firmware_v1.1.0.bin
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-      MQTT_BROKER: ${{ secrets.MQTT_BROKER }}
-      MQTT_PORT: ${{ secrets.MQTT_PORT }}
-      MQTT_USER: ${{ secrets.MQTT_USER }}
-      MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
-      MQTT_TLS: ${{ secrets.MQTT_TLS }}
 
     steps:
       - name: Checkout repo
@@ -35,6 +26,20 @@ jobs:
       - name: Set up PlatformIO
         run: pip install platformio
 
+      # ✅ Detectar versión desde tag o generar una versión dev
+      - name: Set firmware version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "FIRMWARE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            DATE=$(date -u +"%Y-%m-%d_%H-%M")
+            echo "FIRMWARE_VERSION=dev-${DATE}" >> $GITHUB_ENV
+          fi
+
+      - name: Set firmware filename
+        run: echo "FIRMWARE_NAME=firmware_${FIRMWARE_VERSION}.bin" >> $GITHUB_ENV
+
       - name: Build firmware
         run: platformio run
 
@@ -46,23 +51,35 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
       - name: Publish MQTT OTA message
         run: |
-            pip install paho-mqtt
-            python3 -c "import os, json, paho.mqtt.publish as publish; \
-            url = 'https://{bucket}.s3.{region}.amazonaws.com/{firmware}'.format( \
+          pip install paho-mqtt
+          python3 -c "import os, json, paho.mqtt.publish as publish; \
+          url = 'https://{bucket}.s3.{region}.amazonaws.com/{firmware}'.format( \
             bucket=os.getenv('S3_BUCKET_NAME'), \
             region=os.getenv('AWS_REGION'), \
             firmware=os.getenv('FIRMWARE_NAME') \
-            ); \
-            payload = json.dumps({ 'version': os.getenv('FIRMWARE_VERSION'), 'url': url }); \
-            publish.single( \
-              topic=os.getenv('DEVICE_TOPIC'), \
-              payload=payload, \
-              hostname=os.getenv('MQTT_BROKER'), \
-              port=int(os.getenv('MQTT_PORT')), \
-              auth={ 'username': os.getenv('MQTT_USER'), 'password': os.getenv('MQTT_PASSWORD') } if os.getenv('MQTT_USER') else None, \
-              tls={} if os.getenv('MQTT_TLS', 'false') == 'true' else None \
-            ); \
-            print('✅ Mensaje OTA enviado')"
-        
+          ); \
+          payload = json.dumps({ 'version': os.getenv('FIRMWARE_VERSION'), 'url': url }); \
+          publish.single( \
+            topic=os.getenv('DEVICE_TOPIC'), \
+            payload=payload, \
+            hostname=os.getenv('MQTT_BROKER'), \
+            port=int(os.getenv('MQTT_PORT')), \
+            auth={ 'username': os.getenv('MQTT_USER'), 'password': os.getenv('MQTT_PASSWORD') } if os.getenv('MQTT_USER') else None, \
+            tls={} if os.getenv('MQTT_TLS', 'false') == 'true' else None \
+          ); \
+          print('✅ Mensaje OTA enviado')"
+
+        env:
+          DEVICE_TOPIC: dispositivo/device1/ota
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+          MQTT_BROKER: ${{ secrets.MQTT_BROKER }}
+          MQTT_PORT: ${{ secrets.MQTT_PORT }}
+          MQTT_USER: ${{ secrets.MQTT_USER }}
+          MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
+          MQTT_TLS: ${{ secrets.MQTT_TLS }}
