@@ -4,7 +4,6 @@
 #include <libdisplay.h>
 
 
-
 /**
  * Verifica si el dispositivo está conectado al WiFi.
  * Si no está conectado intenta reconectar a la red.
@@ -12,15 +11,23 @@
  * no se tiene conexión.
  */
 void checkWiFi() {
-  if (WiFi.status() != WL_CONNECTED){
-    Serial.print("Probando WiFi");
-    while (WiFi.waitForConnectResult() != WL_CONNECTED){
-      WiFi.begin(ssid, password);
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi connection lost. Reconnecting...");
+    WiFi.reconnect();
+    
+    // Wait for reconnection
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
       Serial.print(".");
-      displayNoSignal();
-      delay(10);
+      attempts++;
     }
-    Serial.println("Conectado");
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("\nWiFi reconnected");
+    } else {
+      Serial.println("\nWiFi reconnection failed");
+    }
   }
 }
 
@@ -29,13 +36,28 @@ void checkWiFi() {
  * sus nombres.
  */
 void listWiFiNetworks() {
-  int numberOfNetworks = WiFi.scanNetworks();
-  Serial.println("\nNumber of networks: ");
-  Serial.print(numberOfNetworks);
-  for(int i =0; i<numberOfNetworks; i++){
-      Serial.println(WiFi.SSID(i));
- 
+  Serial.println("Scanning for WiFi networks...");
+  int n = WiFi.scanNetworks();
+  
+  if (n == 0) {
+    Serial.println("No networks found");
+  } else {
+    Serial.print(n);
+    Serial.println(" networks found");
+    
+    for (int i = 0; i < n; ++i) {
+      // Print SSID and RSSI for each network found
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print(WiFi.SSID(i));
+      Serial.print(" (");
+      Serial.print(WiFi.RSSI(i));
+      Serial.println("dBm)");
+    }
   }
+  
+  // Delete the scan result to free memory
+  WiFi.scanDelete();
 }
 
 /**
@@ -53,32 +75,26 @@ String getHostname() {
 /**
  * Inicia el servicio de WiFi e intenta conectarse a la red WiFi específicada en las constantes.
  */
-void startWiFi(String hostname) {
-  if(hostname.length() == 0) hostname = getHostname();
-  WiFi.hostname(hostname);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.println("(\n\nIntentando conectar a SSID: ");
-  Serial.print(ssid);
-  while (WiFi.status() != WL_CONNECTED) {
-    switch(WiFi.status()) {
-    case WL_NO_SSID_AVAIL:
-      Serial.print("\nNo se encuentra la red WiFi: ");
-      Serial.print(ssid);
-      break;
-    case WL_CONNECTION_LOST:
-      Serial.println("\nSe perdio la conexion con la red WiFi.");
-      break;
-    case WL_DISCONNECTED:
-      Serial.println("\nSe desconecto de la red WiFi.");
-      break;
-    case WL_CONNECT_FAILED:
-      Serial.println("\nNo se ha logrado conectar con la red, resetee el node y vuelva a intentar");
-      break;
-    }
-    WiFi.begin(ssid, password);
-    Serial.print(".");
-    delay(1000);
+void startWiFi(const char* hostname) {
+  if (hostname && strlen(hostname) > 0) {
+    WiFi.setHostname(hostname);
   }
-  Serial.println("Conectado!");
+  
+  WiFi.begin(ssid, password);
+  
+  // Wait for connection
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nWiFi connection failed");
+  }
 }

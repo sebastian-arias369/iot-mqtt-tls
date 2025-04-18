@@ -29,15 +29,16 @@
 #include <HTTPClient.h>
 #include <Update.h>
 #include <ArduinoJson.h>
+#include <PubSubClient.h>
 
 // Constantes para OTA
 #define OTA_TOPIC "dispositivo/device1/ota"  // Tópico para recibir actualizaciones OTA
 #define OTA_BUFFER_SIZE 4096                 // Tamaño del buffer para descargar firmware
 
 // Funciones para OTA
-void setupOTA();                            // Configuración inicial de OTA
+void setupOTA(PubSubClient & client);                            // Configuración inicial de OTA
 void checkOTAUpdate(const char* payload);   // Verifica si hay actualizaciones disponibles
-bool performOTAUpdate(const char* url);     // Realiza la actualización OTA
-void subscribeToOTATopic();                 // Suscribe al tópico de OTA
-
+void performOTAUpdateTask(void* parameter); // Función que ejecuta la OTA (en otro hilo)
+void subscribeToOTATopic(PubSubClient & client);                 // Suscribe al tópico de OTA
+void startOTATask(const char* url); // Lanza la tarea OTA en otro núcleo
 #endif /* LIBOTA_H */

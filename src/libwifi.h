@@ -28,6 +28,6 @@
 extern const char* ssid;            //< Cambia por el nombre de tu red WiFi
 extern const char* password;        //< Cambia por la contraseña de tu red WiFi
 void listWiFiNetworks();            //< Función para listar las redes WiFi disponibles
-void startWiFi(String hostname);    //< Función para iniciar el servicio de WiFi
+void startWiFi(const char* hostname);    //< Función para iniciar el servicio de WiFi
 void checkWiFi();                   //< Función para verificar la conexión a la red WiFi
 #endif /* LIBWIFI_H */

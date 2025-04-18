@@ -26,6 +26,17 @@
 #include <SHTSensor.h>
 #include <libota.h>
 
+//#define PRINT
+#ifdef PRINT
+#define PRINTD(x, y) Serial.println(x, y)
+#define PRINTLN(x) Serial.println(x)
+#define PRINT(x) Serial.print(x)
+#else
+#define PRINTD(x, y)
+#define PRINTLN(x)
+#define PRINT(x)
+#endif
+
 SHTSensor sht;     //Sensor SHT21
 String alert = ""; //Mensaje de alerta
 extern const char * client_id;  //ID del cliente MQTT
@@ -86,6 +97,7 @@ void reconnect() {
     if (client.connect(client_id, mqtt_user, mqtt_password)) { //Intenta conectarse al servidor MQTT
       Serial.println("Conectado");
       client.subscribe(MQTT_TOPIC_SUB); //Se suscribe al tópico de suscripción
+      setupOTA(client); //Configura la funcionalidad OTA
       Serial.println("Suscripción a " + String(MQTT_TOPIC_SUB));
     } else {
       Serial.println("Problema con la conexión, revise los valores de las constantes MQTT");
@@ -110,7 +122,6 @@ void setupIoT() {
   client.setCallback(receivedCallback);       //Configura la función que se ejecutará cuando lleguen mensajes a la suscripción
   setTime();                    //Ajusta el tiempo del dispositivo con servidores SNTP
   setupSHT();                   //Configura el sensor SHT21
-  setupOTA();                   //Configura la funcionalidad OTA
 }
 
 
@@ -130,16 +141,16 @@ void setupSHT() {
  */
 bool measure(SensorData * data) {
   if ((millis() - measureTime) >= MEASURE_INTERVAL * 1000 ) {
-    Serial.println("\nMidiendo variables...");
+    PRINTLN("\nMidiendo variables...");
     measureTime = millis();    
     if (sht.readSample()) {
         data->temperature = sht.getTemperature();
         data->humidity = sht.getHumidity();
-        Serial.print("↑Sensor SHT ❖ Humedad: ");
-        Serial.print(data->humidity, 2);
-        Serial.print(" %RH ❖ Temperatura: ");
-        Serial.print(data->temperature, 2);
-        Serial.println(" °C");
+        PRINT(" %RH ❖ Temperatura: ");
+        PRINTD(data->humidity, 2);
+        PRINT(" %RH ❖ Temperatura: ");
+        PRINTD(data->temperature, 2);
+        PRINTLN(" °C");
         return true;
     } else {
         Serial.print("Error leyendo la muestra\n");
@@ -174,7 +185,7 @@ void sendSensorData(float temperatura, float humedad) {
   data += "}";
   char payload[data.length()+1];
   data.toCharArray(payload,data.length()+1);
-  Serial.println("client id: " + String(client_id) + "\ntopic: " + String(MQTT_TOPIC_PUB) + "\npayload: " + data);
+  PRINTLN("client id: " + String(client_id) + "\ntopic: " + String(MQTT_TOPIC_PUB) + "\npayload: " + data);
   client.publish(MQTT_TOPIC_PUB, payload);
 }
 

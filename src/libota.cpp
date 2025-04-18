@@ -25,13 +25,11 @@
 #include <libota.h>
 #include <libiot.h>
 
-// Variables externas
-extern PubSubClient client;
 
 /**
  * Configuración inicial de OTA
  */
-void setupOTA() {
+void setupOTA(PubSubClient& client) {
     // Inicializa la biblioteca Update
     Update.onProgress([](unsigned int progress, unsigned int total) {
         // Muestra el progreso de la actualización
@@ -39,7 +37,7 @@ void setupOTA() {
     });
     
     // Suscribe al tópico de OTA
-    subscribeToOTATopic();
+    subscribeToOTATopic(client);
     
     Serial.println("OTA configurado correctamente");
 }
@@ -47,13 +45,14 @@ void setupOTA() {
 /**
  * Suscribe al tópico de OTA
  */
-void subscribeToOTATopic() {
-    if (client.connected()) {
-        client.subscribe(OTA_TOPIC);
-        Serial.println("Suscrito al tópico OTA: " + String(OTA_TOPIC));
-    } else {
-        Serial.println("No se pudo suscribir al tópico OTA: Cliente MQTT no conectado");
+void subscribeToOTATopic(PubSubClient & client) {
+    // Verifica si el cliente MQTT está conectado
+    if (!client.connected()) {
+        Serial.println("Cliente MQTT no conectado. No se puede suscribir al tópico OTA.");
+        //return;
     }
+    client.subscribe(OTA_TOPIC);
+    Serial.println("Suscrito al tópico OTA: " + String(OTA_TOPIC));
 }
 
 /**
@@ -81,84 +80,96 @@ void checkOTAUpdate(const char* payload) {
         Serial.println("Nueva versión disponible: " + String(version));
         Serial.println("URL de actualización: " + String(url));
         
-        // Realiza la actualización OTA
-        if (performOTAUpdate(url)) {
-            Serial.println("Actualización completada. Reiniciando...");
-            ESP.restart();
-        } else {
-            Serial.println("Error en la actualización OTA");
-        }
+        // Lanza tarea OTA
+        startOTATask(url);
     } else {
         Serial.println("Mensaje OTA inválido: No contiene URL");
     }
 }
 
+
 /**
- * Realiza la actualización OTA
- * Descarga el firmware desde la URL proporcionada
+ * Lanza la tarea OTA en otro núcleo
  */
-bool performOTAUpdate(const char* url) {
+void startOTATask(const char* url) {
+    // Hacer una copia en heap para que sobreviva en la tarea
+    char* urlCopy = strdup(url);
+
+    xTaskCreatePinnedToCore(
+        performOTAUpdateTask, // función
+        "OTA_Task",           // nombre de la tarea
+        8192,                 // tamaño del stack
+        urlCopy,              // parámetro (puntero a URL)
+        1,                    // prioridad
+        NULL,                 // handle
+        1                     // núcleo (Core 1)
+    );
+}
+
+
+/**
+ * Función que ejecuta la OTA (en otro hilo)
+ */
+void performOTAUpdateTask(void* parameter) {
+    const char* url = (const char*)parameter;
+
     Serial.println("Iniciando actualización OTA desde: " + String(url));
-    
-    // Inicializa HTTP
+
     HTTPClient http;
     http.begin(url);
-    
-    // Realiza la petición HTTP
+
     int httpCode = http.GET();
-    
     if (httpCode != HTTP_CODE_OK) {
         Serial.printf("Error HTTP: %d\n", httpCode);
         http.end();
-        return false;
+        free((void*)url);
+        vTaskDelete(NULL);
+        return;
     }
-    
-    // Obtiene el tamaño del firmware
+
     int contentLength = http.getSize();
     Serial.printf("Tamaño del firmware: %d bytes\n", contentLength);
-    
-    // Inicia la actualización
+
     if (!Update.begin(contentLength)) {
         Serial.println("No hay espacio suficiente para la actualización");
         http.end();
-        return false;
+        free((void*)url);
+        vTaskDelete(NULL);
+        return;
     }
-    
-    // Buffer para descargar el firmware
+
     uint8_t buff[OTA_BUFFER_SIZE] = { 0 };
-    WiFiClient * stream = http.getStreamPtr();
-    
-    // Descarga y escribe el firmware
+    WiFiClient* stream = http.getStreamPtr();
+
     size_t written = 0;
     while (written < contentLength) {
-        // Lee datos del servidor
         size_t available = stream->available();
         if (available) {
             size_t bytesToRead = min(available, sizeof(buff));
             size_t bytesRead = stream->readBytes(buff, bytesToRead);
             
-            // Escribe los datos en la memoria flash
             if (Update.write(buff, bytesRead) != bytesRead) {
                 Serial.println("Error al escribir en la memoria flash");
                 http.end();
-                return false;
+                free((void*)url);
+                vTaskDelete(NULL);
+                return;
             }
-            
             written += bytesRead;
         }
-        
-        // Pequeña pausa para evitar sobrecarga
-        delay(1);
+        delay(1);  // respirito para el watchdog
     }
-    
-    // Finaliza la actualización
+
     if (Update.end()) {
         Serial.println("Actualización completada correctamente");
         http.end();
-        return true;
+        free((void*)url);
+        delay(1000);
+        ESP.restart();
     } else {
         Serial.println("Error al finalizar la actualización: " + String(Update.errorString()));
         http.end();
-        return false;
+        free((void*)url);
+        vTaskDelete(NULL);
     }
 }
