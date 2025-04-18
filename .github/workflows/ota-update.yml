@@ -1,4 +1,4 @@
-name: OTA Update to ESP32 via MQTT
+name: OTA Update to ESP32 via MQTT TLS
 
 on:
   push:
