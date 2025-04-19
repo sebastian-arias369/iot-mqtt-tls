@@ -49,7 +49,7 @@ void subscribeToOTATopic(PubSubClient & client) {
     // Verifica si el cliente MQTT está conectado
     if (!client.connected()) {
         Serial.println("Cliente MQTT no conectado. No se puede suscribir al tópico OTA.");
-        //return;
+        return;
     }
     client.subscribe(OTA_TOPIC);
     Serial.println("Suscrito al tópico OTA: " + String(OTA_TOPIC));
