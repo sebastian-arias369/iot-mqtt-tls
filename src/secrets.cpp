@@ -46,7 +46,7 @@
 
 // Variables de configuración de la red WiFi
 // Cambia estos valores por los de su red WiFi
-#define SSID "MAXELL_2.4_F2F"                     ///< Cambia por el nombre de tu red WiFi
+#define SSID "VIRUS2"                     ///< Cambia por el nombre de tu red WiFi
 #define PASSWORD "a1b2c3d4"                       ///< Cambia por la contraseña de tu red WiFi
 
 // Cambia al certificado del broker: Certificado raíz de Let's Encrypt (ISRG Root X1) en formato PEM
